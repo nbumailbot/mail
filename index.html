@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBU.UZ Xabarlar Paneli</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff; min-height: 100vh;
+        }
+        h2 { text-align: center; margin-bottom: 20px; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .sender { font-weight: bold; font-size: 1.1em; color: #ffdd57; }
+        .subject { margin: 10px 0; font-size: 1em; }
+        .snippet { font-size: 0.9em; opacity: 0.8; margin-bottom: 15px; }
+        .btn {
+            background: rgba(255, 255, 255, 0.2); border: none;
+            padding: 10px 20px; border-radius: 8px; color: #fff;
+            cursor: pointer; width: 100%; transition: 0.3s; font-weight: bold;
+        }
+        .btn:hover { background: rgba(255, 255, 255, 0.4); }
+        .loader { text-align: center; font-style: italic; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <h2>📨 Kelgan Xabarlar</h2>
+    <div id="emails-container">
+        <div class="loader">Xabarlar yuklanmoqda...</div>
+    </div>
+
+    <script>
+        // DIQQAT: Bu yerga Google Apps Script Deploy URL manzilini qo'ying!
+        const GAS_WEB_APP_URL = "SIZNING_GOOGLE_SCRIPT_WEB_APP_URLINGIZ";
+
+        async function fetchEmails() {
+            try {
+                let response = await fetch(GAS_WEB_APP_URL + "?action=get_emails");
+                let emails = await response.json();
+                let container = document.getElementById("emails-container");
+                container.innerHTML = "";
+
+                if (emails.length === 0) {
+                    container.innerHTML = "<div class='loader'>Yangi xabarlar yo'q.</div>";
+                    return;
+                }
+
+                emails.forEach(email => {
+                    let card = document.createElement("div");
+                    card.className = "glass-card";
+                    
+                    // Asl yuboruvchini body qismidan ajratib olishga urinish
+                    let sender = email.snippet.includes("[ORIGINAL_SENDER:") 
+                                 ? email.snippet.split("[ORIGINAL_SENDER:")[1].split("]")[0] 
+                                 : email.sender;
+
+                    card.innerHTML = `
+                        <div class="sender">👤 ${sender}</div>
+                        <div class="subject">📌 ${email.subject}</div>
+                        <button class="btn" onclick="downloadToTg('${email.id}')">Telegramga yuklash</button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                document.getElementById("emails-container").innerHTML = "<div class='loader'>Xatolik yuz berdi.</div>";
+            }
+        }
+
+        async function downloadToTg(id) {
+            Telegram.WebApp.showAlert("Xabar bot orqali yuborilmoqda...");
+            await fetch(GAS_WEB_APP_URL + "?action=download&id=" + id);
+            Telegram.WebApp.close();
+        }
+
+        window.onload = fetchEmails;
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+    </script>
+</body>
+</html>
